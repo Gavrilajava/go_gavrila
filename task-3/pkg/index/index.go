@@ -75,7 +75,7 @@ func insertionSort(arr []crawler.Document) []crawler.Document {
 	return arr
 }
 
-// Checks if url has already been indexed for a word.
+// Checks if url has already been indexed for the word.
 func not_indexed(word string, id int) bool {
 	if len(index[word]) > 0 {
 		return index[word][len(index[word]) - 1] != id
