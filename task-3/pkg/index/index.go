@@ -59,7 +59,7 @@ func find(id int) crawler.Document {
 	return crawler.Document{}
 }
 
-// Insertion sort algorythm implementation for crawler.Document
+// Insertion sort algorithm implementation for crawler.Document
 func insertionSort(arr []crawler.Document) []crawler.Document {
 
 	for i := 1; i < len(arr); i++ {
