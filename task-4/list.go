@@ -53,6 +53,7 @@ func (l *List) String() string {
 // Pop удаляет первый элемент списка.
 func (l *List) Pop() *List {
 	l.root.next = l.root.next.next
+	l.root.next.prev = l.root
 	return l
 }
 
