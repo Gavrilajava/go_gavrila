@@ -56,6 +56,7 @@ func TestList_Reverse(t *testing.T) {
 		t.Fatalf("получили %s, ожидалось %s", got, want)
 	}
 
+	l = New()
 	l.Push(Elem{Val: 3})
 
 	got = l.Reverse().String()
@@ -64,6 +65,8 @@ func TestList_Reverse(t *testing.T) {
 		t.Fatalf("получили %s, ожидалось %s", got, want)
 	}
 
+	l = New()
+	l.Push(Elem{Val: 3})
 	l.Push(Elem{Val: 2})
 	l.Push(Elem{Val: 1})
 
