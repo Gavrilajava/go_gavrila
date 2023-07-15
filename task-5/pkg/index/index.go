@@ -42,11 +42,11 @@ func read(r io.Reader) []string {
 	reader := bufio.NewReader(r)
 	var lines []string
 
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			break
-		}
+	for line, err := reader.ReadString('\n'); err != nil {
+		// line, err := reader.ReadString('\n')
+		// if err != nil {
+		// 	break
+		// }
 		lines = append(lines, strings.TrimSuffix(line, "\n"))
 	}
 
