@@ -1,177 +1,119 @@
 package index
 
 import (
-	"bufio"
-	"fmt"
+	"encoding/json"
 	"go-gavrila/task-5/pkg/crawler"
 	"io"
 	"os"
-	"strconv"
 	"strings"
 )
 
-const content_path = `./content.csv`
-const index_path = `./index.csv`
-const separator = `;`
+const storage_path = `./storage.json`
 
-var index = make(map[string][]int)
-var content = []crawler.Document{}
-
-func LoadFiles() {
-	load_content(load_file(content_path))
-	load_index(load_file(index_path))
+type Service struct {
+	Index     map[string][]int   `json:"index"`
+	Documents []crawler.Document `json:"Documents"`
+	Counter   int                `json:"counter"`
 }
 
-// Loads data from file and converts it to strings slice
-func load_file(name string) []string {
-	fmt.Println("loading", name)
-	file, err := os.Open(name)
+func New() (*Service, error) {
+
+	s := Service{
+		Index:     make(map[string][]int),
+		Documents: []crawler.Document{},
+	}
+
+	f, err := os.Open(storage_path)
 	if err != nil {
-		fmt.Println(err)
-		return []string{}
-	}
-	defer file.Close()
-
-	return read(file)
-
-}
-
-// reads data from provided source
-func read(r io.Reader) []string {
-
-	reader := bufio.NewReader(r)
-	var lines []string
-
-	for line, err := reader.ReadString('\n'); err != nil {
-		// line, err := reader.ReadString('\n')
-		// if err != nil {
-		// 	break
-		// }
-		lines = append(lines, strings.TrimSuffix(line, "\n"))
-	}
-
-	fmt.Println("imported", len(lines), "items")
-
-	return lines
-}
-
-// writes a sting to the writer
-func write(w io.Writer, s string) error {
-	_, err := w.Write([]byte(s))
-	return err
-}
-
-// Converts slice of strings to an array of crawler.Document
-func load_content(data []string) {
-
-	for _, line := range data {
-
-		arr := strings.Split(line, separator)
-		i, err := strconv.ParseInt(arr[0], 0, 64)
-		if err != nil {
-			fmt.Println(err)
+		if os.IsNotExist(err) {
+			// if file does not exist, just return empty service
+			return &s, nil
 		} else {
-			content = append(content, crawler.Document{int(i), arr[1], arr[2], arr[3]})
+			return nil, err
 		}
-
 	}
+	defer f.Close()
+
+	s, err = read(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return &s, nil
 
 }
 
-// Converts strings slice to a map
-func load_index(data []string) {
-
-	for _, line := range data {
-		arr := strings.Split(line, separator)
-		for _, i := range strings.Split(arr[1], `,`) {
-			v, err := strconv.ParseInt(i, 0, 64)
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				index[arr[0]] = append(index[arr[0]], int(v))
-			}
-		}
-	}
-
+func (s Service) Empty() bool {
+	return len(s.Documents) < 1
 }
 
 // Adds documents to a collection and maintains indices.
-func Add(links []crawler.Document) {
-	var counter int
-	if len(content) > 0 {
-		counter = content[len(content)-1].ID
-		// Clear the old index from file if we have previous content
-		if err := os.Truncate(index_path, 0); err != nil {
-			fmt.Println(err)
-			return
-		}
-	}
-
-	content_storage, err := os.OpenFile(content_path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(content_storage.Name())
+func (s *Service) Add(links []crawler.Document) *Service {
 
 	for _, link := range links {
-		counter++
-		link.ID = counter
-		content = append(content, link)
-		if err := write(content_storage, fmt.Sprintf("%d;%s;%s;%s\n", link.ID, link.URL, link.Title, link.Body)); err != nil {
-			fmt.Println(err)
-		}
+
+		s.Counter++
+		link.ID = s.Counter
+		s.Documents = append(s.Documents, link)
 		words := strings.Split(strings.ToLower(link.Title), ` `)
 		for _, word := range words {
-			if not_indexed(word, link.ID) {
-				index[word] = append(index[word], link.ID)
+			if s.not_indexed(word, link.ID) {
+				s.Index[word] = append(s.Index[word], link.ID)
 			}
 		}
-	}
-	defer content_storage.Close()
 
-	index_storage, err := os.OpenFile(index_path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	}
+
+	return s
+}
+
+func (s Service) Save() error {
+	f, err := os.Create(storage_path)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return err
 	}
-	for word, indices := range index {
-		if err := write(index_storage, fmt.Sprintf("%s;%s\n", word, strings.Trim(strings.Replace(fmt.Sprint(indices), " ", `,`, -1), "[]"))); err != nil {
-			fmt.Println(err)
-		}
-	}
-	defer index_storage.Close()
+
+	return s.write(f)
 }
 
 // Retrieves documents based on a specified word. If the word is empty,
-// it returns all the documents in the content collection.
+// it returns all the documents in the Documents collection.
 // Result is sorted by url
-func Collect(word string) []crawler.Document {
+func (s Service) Collect(word string) []crawler.Document {
 	if word == "" {
-		return insertionSort(content)
+		return insertionSort(s.Documents)
 	}
 	var result []crawler.Document
-	for _, id := range index[word] {
-		result = append(result, find(id))
+	for _, id := range s.Index[word] {
+		result = append(result, s.find(id))
 	}
 	return insertionSort(result)
 }
 
 // Retrieves a document based on its ID.
-func find(id int) crawler.Document {
-	low, high := 0, len(content)-1
+func (s Service) find(id int) crawler.Document {
+	low, high := 0, len(s.Documents)-1
 	for low <= high {
 		mid := (low + high) / 2
-		if content[mid].ID == id {
-			return content[mid]
+		if s.Documents[mid].ID == id {
+			return s.Documents[mid]
 		}
-		if content[mid].ID < id {
+		if s.Documents[mid].ID < id {
 			low = mid + 1
 		} else {
 			high = mid - 1
 		}
 	}
 	return crawler.Document{}
+}
+
+// Checks if url has already been indexed for the word.
+func (s Service) not_indexed(word string, id int) bool {
+	if len(s.Index[word]) > 0 {
+		return s.Index[word][len(s.Index[word])-1] != id
+	} else {
+		return true
+	}
 }
 
 // Insertion sort algorithm implementation for crawler.Document
@@ -190,15 +132,34 @@ func insertionSort(arr []crawler.Document) []crawler.Document {
 	return arr
 }
 
-// Checks if url has already been indexed for the word.
-func not_indexed(word string, id int) bool {
-	if len(index[word]) > 0 {
-		return index[word][len(index[word])-1] != id
-	} else {
-		return true
+// reads data from provided source
+func read(r io.Reader) (Service, error) {
+
+	var s Service
+
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return s, err
 	}
+
+	err = json.Unmarshal(data, &s)
+	if err != nil {
+		return s, err
+	}
+	return s, nil
 }
 
-func Empty() bool {
-	return len(content) < 1
+// writes a sting to the writer
+func (s *Service) write(w io.Writer) error {
+
+	j, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write(j)
+	if err != nil {
+		return err
+	}
+	return nil
 }
