@@ -72,7 +72,7 @@ func (s Service) Save() error {
 	if err != nil {
 		return err
 	}
-
+	defer f.Close()
 	return s.write(f)
 }
 
