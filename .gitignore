@@ -20,5 +20,5 @@
 # Go workspace file
 go.work
 
-content.csv
-index.csv
+storage.json
+
