@@ -20,7 +20,7 @@ func main() {
 
 	index, err := index.New()
 	if err != nil {
-		fmt.Println(err)
+		log.Fatal(err)
 	} else {
 
 		if index.Empty() {
@@ -28,13 +28,12 @@ func main() {
 			for _, url := range urls {
 				res, err := s.Scan(url, depth)
 				if err != nil {
-					log.Println(err)
-					continue
+					log.Fatal(err)
 				}
 				index = index.Add(res)
 			}
 			if err = index.Save(); err != nil {
-				log.Println(err)
+				log.Fatal(err)
 			}
 		}
 
