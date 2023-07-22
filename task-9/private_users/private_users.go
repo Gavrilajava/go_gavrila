@@ -1,7 +1,5 @@
 package private_users
 
-import "fmt"
-
 type PrivateEmployee struct {
 	age int
 }
@@ -12,32 +10,23 @@ type PrivateCustomer struct {
 
 func Oldest(users ...any) any {
 
-	if len(users) == 0 {
-		return nil
-	}
+	var m any
 
-	if len(users) == 1 {
-		return users[0]
-	}
-
-	maxIndex := 0
-	maxAge := 0
-
-	fmt.Println('m')
-
-	for i, u := range users {
-		currentAge := 0
-		switch t := u.(type) {
-		case PrivateEmployee:
-			currentAge = t.age
-		case PrivateCustomer:
-			currentAge = t.age
-		default:
-			currentAge = 0
-		}
-		if currentAge > maxAge {
-			maxAge, maxIndex = currentAge, i
+	for _, u := range users {
+		if age(u) > age(m) {
+			m = u
 		}
 	}
-	return users[maxIndex]
+	return m
+}
+
+func age(u any) int {
+	switch t := u.(type) {
+	case PrivateEmployee:
+		return t.age
+	case PrivateCustomer:
+		return t.age
+	default:
+		return 0
+	}
 }
