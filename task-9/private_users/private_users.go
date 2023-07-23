@@ -9,13 +9,14 @@ type PrivateCustomer struct {
 }
 
 func Oldest(users ...any) any {
-	var m any
-	for _, u := range users {
-		if age(u) > age(m) {
-			m = u
+	var oldest any
+	max := 0
+	for _, user := range users {
+		if age := age(user); age > max {
+			oldest, max = user, age
 		}
 	}
-	return m
+	return oldest
 }
 
 func age(u any) int {
