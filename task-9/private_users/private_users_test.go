@@ -18,29 +18,29 @@ func TestOldest(t *testing.T) {
 			name: "Works for customer",
 			args: args{
 				users: []any{
-					PrivateCustomer{age: 99},
-					PrivateEmployee{age: 15},
-					PrivateCustomer{age: 26},
+					Customer{age: 99},
+					Employee{age: 15},
+					Customer{age: 26},
 				}},
-			want: PrivateCustomer{age: 99},
+			want: Customer{age: 99},
 		},
 		{
 			name: "Works for employee",
 			args: args{
 				users: []any{
-					PrivateCustomer{age: 14},
-					PrivateEmployee{age: 102},
-					PrivateCustomer{age: 32},
+					Customer{age: 14},
+					Employee{age: 102},
+					Customer{age: 32},
 				}},
-			want: PrivateEmployee{age: 102},
+			want: Employee{age: 102},
 		},
 		{
 			name: "Works for one",
 			args: args{
 				users: []any{
-					PrivateCustomer{age: 14},
+					Customer{age: 14},
 				}},
-			want: PrivateCustomer{age: 14},
+			want: Customer{age: 14},
 		},
 		{
 			name: "Works for empty",

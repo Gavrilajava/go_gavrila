@@ -1,10 +1,10 @@
 package private_users
 
-type PrivateEmployee struct {
+type Employee struct {
 	age int
 }
 
-type PrivateCustomer struct {
+type Customer struct {
 	age int
 }
 
@@ -21,9 +21,9 @@ func Oldest(users ...any) any {
 
 func age(u any) int {
 	switch t := u.(type) {
-	case PrivateEmployee:
+	case Employee:
 		return t.age
-	case PrivateCustomer:
+	case Customer:
 		return t.age
 	default:
 		return 0
