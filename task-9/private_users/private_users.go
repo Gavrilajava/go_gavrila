@@ -8,8 +8,7 @@ type Customer struct {
 	age int
 }
 
-func Oldest(users ...any) any {
-	var oldest any
+func Oldest(users ...any) (oldest any) {
 	max := 0
 	for _, user := range users {
 		if age := age(user); age > max {
