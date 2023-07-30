@@ -1,32 +1,45 @@
 package main
 
 import (
-	"flag"
+	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"net"
+	"os"
 )
 
 func main() {
 
-	token := flag.String("s", "", "search string")
-	flag.Parse()
-
-	conn, err := net.Dial("tcp4", "0.0.0.0:3500")
+	conn, err := net.Dial("tcp4", "0.0.0.0:8000")
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer conn.Close()
+	defer fmt.Println("Connection Closed")
 
-	_, err = conn.Write(append([]byte(*token), '\n'))
-	if err != nil {
-		log.Fatal(err)
+	server := bufio.NewReader(conn)
+	console := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Println("Eneter your search term:")
+		msg, _, err := console.ReadLine()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println("Searching", string(msg))
+		fmt.Fprintf(conn, "%s\n", string(msg))
+
+		for {
+			reply, _, err := server.ReadLine()
+			if err != nil {
+				log.Fatal(err)
+			}
+			if len(reply) == 0 {
+				break
+			}
+			fmt.Println(string(reply))
+		}
 	}
 
-	msg, err := io.ReadAll(conn)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Server response: \n", string(msg))
 }
