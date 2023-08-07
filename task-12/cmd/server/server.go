@@ -33,6 +33,8 @@ func main() {
 		}
 	}
 
-	webapp.Start(":8000", *index)
-
+	err = webapp.Start(":8000", *index)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

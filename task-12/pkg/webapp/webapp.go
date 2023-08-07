@@ -13,17 +13,13 @@ import (
 
 var data index.Service
 
-func Start(port string, i index.Service) {
+func Start(port string, i index.Service) error {
 	data = i
 	mux := mux.NewRouter()
 	mux.HandleFunc("/index", indexHandler).Methods(http.MethodGet)
 	mux.HandleFunc("/docs", docsHandler).Methods(http.MethodGet)
 	fmt.Println("Starting server on port: " + port)
-	err := http.ListenAndServe(port, mux)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	return http.ListenAndServe(port, mux)
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
