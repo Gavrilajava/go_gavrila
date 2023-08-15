@@ -19,14 +19,9 @@ func (api *API) documents(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) document(w http.ResponseWriter, r *http.Request) {
-	id, err := getId(r)
+	d, code, err := api.getDocument(r)
 	if err != nil {
-		http.Error(w, "id should be an integer value", http.StatusUnprocessableEntity)
-		return
-	}
-	d, err := api.index.Find(id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), code)
 		return
 	}
 	err = json.NewEncoder(w).Encode(d)
@@ -53,14 +48,9 @@ func (api *API) createDocument(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) updateDocument(w http.ResponseWriter, r *http.Request) {
-	id, err := getId(r)
+	d, code, err := api.getDocument(r)
 	if err != nil {
-		http.Error(w, "id should be an integer value", http.StatusUnprocessableEntity)
-		return
-	}
-	d, err := api.index.Find(id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), code)
 		return
 	}
 	params, err := documentParams(r)
@@ -79,14 +69,9 @@ func (api *API) updateDocument(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *API) destroyDocument(w http.ResponseWriter, r *http.Request) {
-	id, err := getId(r)
+	d, code, err := api.getDocument(r)
 	if err != nil {
-		http.Error(w, "id should be an integer value", http.StatusUnprocessableEntity)
-		return
-	}
-	d, err := api.index.Find(id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		http.Error(w, err.Error(), code)
 		return
 	}
 	api.index.Delete(d)
@@ -97,13 +82,17 @@ func (api *API) destroyDocument(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getId(r *http.Request) (int, error) {
+func (api *API) getDocument(r *http.Request) (crawler.Document, int, error) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		return 0, err
+		return crawler.Document{}, http.StatusUnprocessableEntity, err
 	}
-	return id, nil
+	d, err := api.index.Find(id)
+	if err != nil {
+		return crawler.Document{}, http.StatusNotFound, err
+	}
+	return d, 0, nil
 }
 
 func documentParams(r *http.Request) (crawler.Document, error) {
