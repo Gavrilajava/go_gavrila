@@ -28,13 +28,13 @@ func main() {
 	client.Send(context.Background(), &pb.Message{Text: "Ground control to Major Tom:"})
 	client.Send(context.Background(), &pb.Message{Text: "Lock your Soyuz hatch and put your helmet on!"})
 
-	err = printAllBooksOnserver(ctx, client)
+	err = printAllMessages(ctx, client)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func printAllBooksOnserver(ctx context.Context, client pb.HubClient) error {
+func printAllMessages(ctx context.Context, client pb.HubClient) error {
 	fmt.Println("Printing all the messages from server:")
 	stream, err := client.Messages(context.Background(), &pb.Empty{})
 	if err != nil {
