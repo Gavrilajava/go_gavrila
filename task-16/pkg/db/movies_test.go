@@ -15,7 +15,13 @@ func TestMain(m *testing.M) {
 
 	var err error
 
-	testDB, err = New("localhost",  5432, "lmdb", "georgegavrilchik", "", "disable", 10)
+	host := os.Getenv("PG_HOST")
+	port := 5342
+	db_name := "lmdb_test"
+	user := os.Getenv("PG_USER")
+	password := os.Getenv("PG_PASSWORD")
+
+	testDB, err = New(host, port, db_name, user, password, "disable", 10)
 
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
