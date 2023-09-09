@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"strconv"
 	"encoding/json"
+	"hash/fnv"
 
 	"github.com/gorilla/mux"
 )
@@ -15,7 +15,7 @@ type API struct {
 	Router *mux.Router
 
 	sync.Mutex
-	db []string
+	db map[string]string
 }
 
 type Link struct {
@@ -30,9 +30,8 @@ type Params struct {
 func New() *API {
 	api := API{
 		Router: mux.NewRouter(),
+		db: make(map[string]string),
 	}
-
-	api.db = append(api.db, "www.google.com")
 
 	api.Router.HandleFunc("/{index}", api.getUrl).Methods(http.MethodGet)
 	api.Router.HandleFunc("/", api.addUrl).Methods(http.MethodPost)
@@ -43,16 +42,13 @@ func New() *API {
 
 
 func (a *API) getUrl(w http.ResponseWriter, r *http.Request) {
-  v := mux.Vars(r)["index"]
-
-	index, err := strconv.Atoi(v)
-
-	if err != nil || index < 0 ||  index >= len(a.db) {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+  index := mux.Vars(r)["index"]
+	
+	if long, ok := a.db[index]; ok {
+		w.Write([]byte(fmt.Sprintf("%s", long)))
 	}
 
-	w.Write([]byte(fmt.Sprintf("%s", a.db[index])))
+	http.Error(w, "Resource Not Found", http.StatusNotFound)
 }
 
 func (a *API) addUrl(w http.ResponseWriter, r *http.Request) {
@@ -66,5 +62,14 @@ func (a *API) addUrl(w http.ResponseWriter, r *http.Request) {
 
 	hostname, _ := os.Hostname()
 
-	w.Write([]byte(fmt.Sprintf("%s/%d", hostname, len(a.db) - 1)))
+	short := hash(params.Url)
+	a.db[short] = params.Url
+
+	w.Write([]byte(fmt.Sprintf("%s/%s", hostname, short)))
+}
+
+func hash(s string) string {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return fmt.Sprintf("%d", h.Sum32())
 }
