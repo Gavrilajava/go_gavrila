@@ -3,90 +3,77 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
-	"github.com/Gavrilajava/go_gavrila/task-20/metrics/pkg/metrics@task-20"
 	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rs/zerolog"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/Gavrilajava/go_gavrila/task-20/common"
 
 	"memcache/pkg/redis"
 )
 
+
 type Api struct {
 	redis   *redis.Storage
-	metrics *metrics.Metrics
-	logger  zerolog.Logger
+	router *mux.Router
 }
 
-func New(redis *redis.Storage, m *metrics.Metrics, l zerolog.Logger) *Api {
-	return &Api{
+
+func New(redis *redis.Storage) *Api {
+	api := Api{
 		redis:   redis,
-		metrics: m,
-		logger:  l,
-	}
-}
-
-func (h *Api) Init(r *mux.Router) {
-	r.HandleFunc("/", h.create).Methods("POST")
-	r.HandleFunc("/{short}", h.get).Methods("GET")
-}
-
-func (h *Api) create(w http.ResponseWriter, r *http.Request) {
-	h.logger.Info().Msg("API create method called")
-	start := time.Now()
-
-	var req struct {
-		Dest  string `json:"destination"`
-		Short string `json:"short"`
+		router: mux.NewRouter(),
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&req)
+	api.router.Use(requestIDMiddleware)
+	api.router.Use(requestTimeOutMiddleware)
+	api.router.Use(setResponseHeaders)
+
+	api.router.HandleFunc("/", api.add).Methods("POST")
+	api.router.HandleFunc("/{short}", api.get).Methods("GET")
+	api.router.Handle("/metrics", promhttp.Handler())
+
+	return &api
+}
+
+
+func (api *Api) Router() *mux.Router {
+	return api.router
+}
+
+func (api *Api) add(w http.ResponseWriter, r *http.Request) {
+
+	var record redis.Record
+
+	err := json.NewDecoder(r.Body).Decode(&record)
 	if err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		h.logger.Error().Err(err).Msg("Failed to decode request body")
+		common.Error(r, err)
 		return
 	}
-	data := redis.Data{Destination: req.Dest, Short: req.Short}
 
-	err = h.redis.Save(data)
-
+	err = api.redis.Add(record)
 	if err != nil {
 		http.Error(w, "Error creating short URL", http.StatusInternalServerError)
-		h.logger.Error().Err(err).Msg("Error creating short URL")
+		common.Error(r, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	h.logger.Info().Msgf("Data created successfully: %v", data)
-	h.metrics.HttpDuration.WithLabelValues("/").Observe(time.Since(start).Seconds())
-	h.metrics.HttpRequestsTotal.WithLabelValues("POST", "/").Inc()
+	json.NewEncoder(w).Encode(record)
+
 }
 
-func (h *Api) get(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
+func (api *Api) get(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	short := vars["short"]
 
-	destination, err := h.redis.Load(short)
+	record, err := api.redis.Get(short)
 	if err != nil {
-		h.logger.Error().Err(err).Msg("Failed to load URL")
+		common.Error(r, err)
 		http.Error(w, "URL not found", http.StatusNotFound)
 		return
 	}
 
-	resp := struct {
-		Destination string `json:"destination"`
-	}{
-		Destination: destination.Destination,
-	}
+	json.NewEncoder(w).Encode(record)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
-
-	h.metrics.HttpRequestsTotal.With(prometheus.Labels{"method": r.Method, "path": "/"}).Inc()
-	h.metrics.HttpDuration.With(prometheus.Labels{"path": "/"}).Observe(time.Since(start).Seconds())
-
-	h.logger.Info().Str("method", r.Method).Str("path", r.URL.Path).Str("duration", time.Since(start).String()).Msg("Request processed successfully")
 }

@@ -7,12 +7,9 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-const expiryDuration = 24 * time.Hour
-
-type Data struct {
-	Short        string    `json:"shortUrl"`
-	Destination  string    `json:"destination"`
-	CreationTime time.Time `json:"-"`
+type Record struct {
+	Short       string    `json:"short"`
+	Long  			string    `json:"long"`
 }
 
 type Storage struct {
@@ -20,24 +17,24 @@ type Storage struct {
 }
 
 func New(addr string, password string, db int) (*Storage, error) {
-	rdb := redis.NewClient(&redis.Options{
+	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: password,
 		DB:       db,
 	})
 
-	_, err := rdb.Ping(context.Background()).Result()
+	_, err := client.Ping(context.Background()).Result()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Storage{
-		client: rdb,
+		client: client,
 	}, nil
 }
 
-func (storage *Storage) Save(urlData Data) error {
-	err := storage.client.Set(context.Background(), urlData.Short, urlData.Destination, expiryDuration).Err()
+func (storage *Storage) Add(r Record) error {
+	err := storage.client.Set(context.Background(), r.Short, r.Long, 24 * time.Hour).Err()
 	if err != nil {
 		return err
 	}
@@ -45,14 +42,14 @@ func (storage *Storage) Save(urlData Data) error {
 	return nil
 }
 
-func (storage *Storage) Load(shortURL string) (Data, error) {
-	destURL, err := storage.client.Get(context.Background(), shortURL).Result()
+func (storage *Storage) Get(short string) (Record, error) {
+	long, err := storage.client.Get(context.Background(), short).Result()
 	if err != nil {
-		return Data{}, err
+		return Record{}, err
 	}
 
-	return Data{
-		Short:       shortURL,
-		Destination: destURL,
+	return Record{
+		Short: short,
+		Long:  long,
 	}, nil
 }

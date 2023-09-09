@@ -3,7 +3,9 @@ module memcache
 go 1.20
 
 require (
+	github.com/Gavrilajava/go_gavrila/task-20/common v0.0.0-00010101000000-000000000000
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/google/uuid v1.3.1
 	github.com/gorilla/mux v1.8.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/rs/zerolog v1.30.0
@@ -23,3 +25,5 @@ require (
 	golang.org/x/sys v0.8.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 )
+
+replace github.com/Gavrilajava/go_gavrila/task-20/common => ../common
